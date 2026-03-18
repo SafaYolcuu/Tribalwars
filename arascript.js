@@ -121,7 +121,7 @@ function wypiszMozliwosci(){
 			czasWyjscia[ilosc_wiosek]=new Date(tmp);
 			ddd = tmp.getDate() + "." + (tmp.getMonth()+1) + "\u00A0" + tmp.getHours() + ":" + tmp.getMinutes() + ":" + tmp.getSeconds();
 			html[ilosc_wiosek]=htmlTmp[i]+"<td>"+ddd+"<td>"+0+"<td><a href='"+dane.linkDorozkazu+id[i]+"&screen=place&x="+cel[0]+"&y="+cel[1]+mozliwewojska+"'>Gonder</a>";
-			tabelkaBB[ilosc_wiosek]="[*]"+dane.nazwyWojsk[najwJednostka]+"[|] "+mojeWioski[i][mojeWioski[i].length-3]+"|"+mojeWioski[i][mojeWioski[i].length-2]+" [|] "+cel[0]+"|"+cel[1]+" [|] "+ddd+" [|] [url=https://"+document.URL.split("/")[2]+dane.linkDorozkazu+id[i]+"&screen=place&x="+cel[0]+"&y="+cel[1]+mozliwewojska+"]Gonder\n";
+		tabelkaBB[ilosc_wiosek]="[*]"+dane.nazwyWojsk[najwJednostka]+"[|] "+mojeWioski[i][mojeWioski[i].length-3]+"|"+mojeWioski[i][mojeWioski[i].length-2]+" [|] "+cel[0]+"|"+cel[1]+" [|] "+ddd+" [|] [url=https://"+document.URL.split("/")[2]+dane.linkDorozkazu+id[i]+"&screen=place&x="+cel[0]+"&y="+cel[1]+mozliwewojska+"]Gonder\n";
 			ilosc_wiosek++;
 		}
 		else{
@@ -373,7 +373,10 @@ function pobierzDane(){
 					wojska[i-1].push(tabela.rows[i].cells[j].textContent);
 					if(!Number(wojska[i-1][j-2])) pustaWioska++;
 				}
-				if(pustaWioska>dane.predkosci.length) pokazWies[i-1]=false;
+				// Disable sadece gerçekten tüm birim sütunları 0 ise yapılsın.
+				// (Aksi halde bazı kolon sayıları ile dane.predkosci.length eşleşmediğinde
+				// bazı köyler yanlışlıkla disable olabiliyor.)
+				if(pustaWioska>=wojska[i-1].length) pokazWies[i-1]=false;
 				id.push(tabela.rows[i].cells[0].getElementsByTagName('span')[0].getAttribute("data-id"));
 				mojeWioski.push(tabela.rows[i].cells[0].getElementsByTagName('span')[2].textContent.match(/\d+/g));
 				nazwyWiosek.push(tabela.rows[i].cells[0].getElementsByTagName('span')[2].textContent);
@@ -420,7 +423,6 @@ function ustawPage(url, page){
 	}
 	return url + (url.indexOf('?')>-1 ? '&' : '?') + 'page='+page;
 }
-
 function getCookie(cname) {
     var name = cname + "=";
     var ca = document.cookie.split(';');
