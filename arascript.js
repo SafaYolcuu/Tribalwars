@@ -1,0 +1,1 @@
+c:\Users\mu_sa\OneDrive\Masaüstü\arascript.js
