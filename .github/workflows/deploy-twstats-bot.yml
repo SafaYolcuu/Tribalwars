@@ -1,0 +1,31 @@
+# Sunucuda: git pull + npm ci + PM2. Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
+# DEPLOY_PATH = monorepo kökü (içinde twstats-whatsapp-bot klasörü), örn. /opt/yyeni
+name: Deploy twstats-whatsapp-bot
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'twstats-whatsapp-bot/**'
+      - '.github/workflows/deploy-twstats-bot.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git pull --ff-only
+            cd twstats-whatsapp-bot
+            npm ci --omit=dev
+            pm2 restart ecosystem.config.cjs --only twstats-bot || pm2 restart twstats-bot
