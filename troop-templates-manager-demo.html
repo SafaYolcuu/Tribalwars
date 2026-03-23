@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Troop Templates Manager — yerel önizleme</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Segoe UI, Tahoma, sans-serif;
+            background: #e8dcc4;
+        }
+        #demo-banner {
+            background: #603000;
+            color: #f4e4bc;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        #demo-banner code {
+            background: rgba(255,255,255,0.15);
+            padding: 2px 6px;
+        }
+        #log {
+            max-height: 120px;
+            overflow: auto;
+            font-size: 12px;
+            background: #fff;
+            border-bottom: 1px solid #bd9c5a;
+            padding: 8px 14px;
+        }
+        /* Tribal Wars benzeri grafik yolu yok; kutu ikonları kırık görünebilir, normal */
+    </style>
+</head>
+<body>
+    <div id="demo-banner">
+        <strong>Yerel önizleme</strong> — Oyun dışı. Şablon kutuları ve basım süreleri çalışır.
+        URL’ye şunu ekleyin: <code>?screen=am_troops&amp;mode=template</code>
+        veya aşağıdaki butona tıklayın.
+        <button type="button" id="fix-url">Parametreleri ayarla</button>
+    </div>
+    <div id="log"><em>UI mesajları burada görünür.</em></div>
+
+    <!-- Script’in beklediği TW konteynerleri -->
+    <div id="contentContainer"></div>
+    <div id="mobileContent"></div>
+
+    <!-- Şablon tıklanınca doldurulacak sahte form alanları -->
+    <div style="display: none" aria-hidden="true">
+        <input id="spear" /><input id="sword" /><input id="axe" /><input id="archer" />
+        <input id="spy" /><input id="light" /><input id="marcher" /><input id="heavy" />
+        <input id="ram" /><input id="catapult" /><input id="template_name" />
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+    <script>
+        // file:// ile açınca bazı tarayıcılar query’yi korur; yoksa butonla eklenir
+        document.getElementById('fix-url').addEventListener('click', function () {
+            var u = new URL(window.location.href);
+            u.searchParams.set('screen', 'am_troops');
+            u.searchParams.set('mode', 'template');
+            window.location.href = u.toString();
+        });
+
+        // --- Tribal Wars sahteleri ---
+        window.game_data = {
+            market: 'tr',
+            locale: 'en_DK',
+            link_base_pure: '/game.php?',
+            player: { id: 1, sitter: 0, points: 10000 },
+            village: { id: 1, x: 500, y: 500, buildings: { barracks: 25, stable: 20, garage: 15 } },
+            units: ['spear', 'sword', 'axe', 'archer', 'spy', 'light', 'marcher', 'heavy', 'ram', 'catapult'],
+            features: {
+                Premium: { active: true },
+                FarmAssistent: { active: false },
+                AccountManager: { active: true },
+            },
+        };
+
+        window.mobiledevice = false;
+
+        window.UI = {
+            InfoMessage: function (msg) {
+                logLine('Info: ' + stripHtml(msg));
+            },
+            ErrorMessage: function (msg) {
+                logLine('Error: ' + stripHtml(msg));
+            },
+            SuccessMessage: function (msg) {
+                logLine('OK: ' + stripHtml(msg));
+            },
+        };
+
+        function stripHtml(s) {
+            var d = document.createElement('div');
+            d.innerHTML = s;
+            return d.textContent || d.innerText || '';
+        }
+
+        function logLine(t) {
+            var el = document.getElementById('log');
+            el.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' — ' + t + '</div>';
+        }
+
+        window.Accountmanager = {
+            calcPop: function () {
+                logLine('Accountmanager.calcPop() çağrıldı (demo).');
+            },
+        };
+    </script>
+    <script src="troop-templates-manager.user.js"></script>
+</body>
+</html>
