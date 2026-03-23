@@ -21,20 +21,25 @@ Kaynak: [RedAlert — Troop Templates Manager](https://forum.tribalwars.net/inde
 `https://safayolcuu.github.io/Tribalwars/`  
 (Sayfa açılışında `?screen=am_troops&mode=template` otomatik eklenir.)
 
-### Tampermonkey’e ham script URL’si
+### Bookmarklet (Tampermonkey yok)
 
-GitHub Pages yayında iken:
+1. GitHub Pages açıldıktan sonra şu sayfayı açın:  
+   **`https://safayolcuu.github.io/Tribalwars/bookmark.html`**
+2. Sayfadaki **“TW: Troop Templates”** bağlantısını **yer imleri çubuğuna sürükleyin** (veya sağ tıklayıp yer imi ekleyin).
+3. Tribal Wars’ta Account Manager **şablon (template)** ekranındayken bu yer imine **bir kez tıklayın**; script uzaktan yüklenir.
+
+Script dosyası (bookmarklet’in çağırdığı adres):
 
 `https://safayolcuu.github.io/Tribalwars/troop-templates-manager.user.js`
 
-Tampermonkey’de *“Add script from URL”* ile bu adresi kullanabilirsiniz (güncellemeler için uygun).
-
-> **Not:** Oyunda kullanırken `UNIT_RECRUIT_SECONDS` değerlerini kendi dünyanıza göre `troop-templates-manager.user.js` içinde düzenleyin.
+> **Not:** Bazı dünyalar harici script enjekte etmeyi kısıtlarsa bookmarklet çalışmayabilir; o durumda eklenti (Tampermonkey vb.) gerekir.  
+> **Not:** `UNIT_RECRUIT_SECONDS` değerlerini kendi dünyanıza göre repodaki `troop-templates-manager.user.js` içinde düzenleyip yeniden push edin.
 
 ## Yerel dosyalar
 
 - `troop-templates-manager.user.js` — userscript (kök ve `docs/` içinde kopya)
 - `docs/index.html` — tarayıcıda oyun dışı önizleme
+- `docs/bookmark.html` — bookmarklet kurulumu (sürükle-bırak)
 - `troop-templates-manager-demo.html` — yerel açılış için eski demo (isteğe bağlı)
 
 ## Lisans
