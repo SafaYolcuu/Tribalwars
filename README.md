@@ -6,27 +6,26 @@ Kaynak: [RedAlert — Troop Templates Manager](https://forum.tribalwars.net/inde
 
 ## GitHub Pages (github.io)
 
-1. GitHub’da yeni bir repository oluşturun (ör. `troop-templates-manager` veya mevcut `yyeni` reposunu kullanın).
-2. Bu projeyi push edin; **`docs/`** klasörü sitede yayınlanacak.
-3. Repo **Settings → Pages**:
+1. Bu repo GitHub’da: **https://github.com/SafaYolcuu/Tribalwars** — güncel kod **`yyeni-push`** dalında.
+2. Repo **Settings → Pages**:
    - **Build and deployment**: *Deploy from a branch*
-   - **Branch**: `main` (veya `master`), klasör: **`/docs`**
+   - **Branch**: **`yyeni-push`** (veya bu dalı `main` ile birleştirdikten sonra `main`), klasör: **`/docs`**
    - Kaydedin; birkaç dakika içinde site hazır olur.
 
-**Site adresi** (örnek):
+**Site adresi** (repo adı `Tribalwars` olduğu için yol `/Tribalwars/` olur):
 
-`https://KULLANICI_ADI.github.io/REPO_ADI/`
+`https://safayolcuu.github.io/Tribalwars/`
 
-Önizleme sayfası:
+Önizleme (`index.html`):
 
-`https://KULLANICI_ADI.github.io/REPO_ADI/`  
+`https://safayolcuu.github.io/Tribalwars/`  
 (Sayfa açılışında `?screen=am_troops&mode=template` otomatik eklenir.)
 
 ### Tampermonkey’e ham script URL’si
 
 GitHub Pages yayında iken:
 
-`https://KULLANICI_ADI.github.io/REPO_ADI/troop-templates-manager.user.js`
+`https://safayolcuu.github.io/Tribalwars/troop-templates-manager.user.js`
 
 Tampermonkey’de *“Add script from URL”* ile bu adresi kullanabilirsiniz (güncellemeler için uygun).
 
