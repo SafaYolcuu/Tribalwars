@@ -497,13 +497,16 @@ function wybieranieWiosek(){
 }
 function pokazOdleglosc(){
 	var inp = document.getElementById('wspolrzedneCelu');
-	var mm = inp.value.match(/\d+\|\d+/);
-	if (mm) inp.value = mm[0];
-	var cel = inp.value.match(/\d+/g);
-	if (!cel || cel.length < 2 || !mojeWioski || !mojeWioski.length) return;
+	if (!inp) return;
+	var normalized = twPlParseCoordText(inp.value);
+	if (normalized) inp.value = normalized;
+	var parts = normalized ? normalized.split('|') : null;
+	var cel = parts && parts.length >= 2 ? [Number(parts[0]), Number(parts[1])] : null;
+	if (!cel || !Number.isFinite(cel[0]) || !Number.isFinite(cel[1])) return;
+	if (!mojeWioski || !mojeWioski.length) return;
 	$("#wyborWojsk tr:has(td) td:nth-child("+(dane.predkosci.length+2)+")").each(function(i){
-		a = Math.abs(Number(cel[0]) - mojeWioski[i][mojeWioski[i].length-3]);
-		b = Math.abs(Number(cel[1]) - mojeWioski[i][mojeWioski[i].length-2]);
+		a = Math.abs(cel[0] - mojeWioski[i][mojeWioski[i].length-3]);
+		b = Math.abs(cel[1] - mojeWioski[i][mojeWioski[i].length-2]);
 		$(this).html(Number((Math.sqrt((a * a) + (b * b))).toFixed(1)));
 	});
 }
