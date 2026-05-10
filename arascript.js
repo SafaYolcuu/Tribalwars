@@ -132,6 +132,29 @@ function twPlParseCoordText(text){
 	return mm ? mm[1] + '|' + mm[2] : null;
 }
 
+/** Etiketsiz metin/ tablo taramasinda ilk gelen kucuk x|y ciftleri genelde gurultu (or. 19|59); koy kutusu nth/embed haric. */
+function twPlRejectNoiseCoordPair(pairStr){
+	var mm = twPlParseCoordText(pairStr);
+	if (!mm) return true;
+	var p = mm.split('|');
+	var x = parseInt(p[0], 10), y = parseInt(p[1], 10);
+	if (!Number.isFinite(x) || !Number.isFinite(y)) return true;
+	return x < 100 && y < 100;
+}
+
+/** Koordinat etiketi yakininda ilk x|y (sayfa genelindeki ilk pipe ciftinden guvenli) */
+function twPlCoordsFromAnchoredBlockText(cv){
+	var t = (cv.innerText || cv.textContent || '').replace(/\s+/g, ' ');
+	var reAnchor = /koordinat|coord|coordinates|koordinaten|position|pozycja|lokalizacja/i;
+	var am = reAnchor.exec(t);
+	if (!am) return null;
+	var slice = t.slice(Math.max(0, am.index - 35), Math.min(t.length, am.index + 160));
+	var cm = slice.match(/(\d{1,4})\s*\|\s*(\d{1,4})/);
+	if (!cm) return null;
+	var ap = cm[1] + '|' + cm[2];
+	return twPlRejectNoiseCoordPair(ap) ? null : ap;
+}
+
 /** Ayni id baska yerde varsa #planer_klinow icindeki hedef kutusu */
 function twPlTargetCoordInput(){
 	return document.querySelector('#planer_klinow #wspolrzedneCelu');
@@ -147,6 +170,7 @@ function twPlFillTargetCoordInput(cel){
 			fbY = pq[1];
 		}
 	}
+	if (cel != null && String(cel).trim() !== '' && twPlRejectNoiseCoordPair(String(cel))) cel = null;
 	var src = cel != null && String(cel).trim() !== '' ? cel : fbX + '|' + fbY;
 	var v = twPlSanitizeCoordPair(src, fbX, fbY);
 	var el = twPlTargetCoordInput();
@@ -168,9 +192,10 @@ function twPlScheduleInfoVillageCoordRefresh(){
 	var n = 0;
 	function tick(){
 		var inp = twPlTargetCoordInput();
-		if (!inp) return;
 		var cv = document.getElementById('content_value');
-		var parsed = twPlCoordsFromInfoVillage() || (cv && twPlCoordsFromMapLinks(cv));
+		var rawParsed = twPlCoordsFromInfoVillage() || (cv && twPlCoordsFromMapLinks(cv));
+		var parsed = (rawParsed && !twPlRejectNoiseCoordPair(rawParsed)) ? rawParsed : null;
+		if (!inp) return;
 		if (parsed) {
 			var v = twPlSanitizeCoordPair(parsed, fbX, fbY);
 			if (v && v !== '0|0') {
@@ -182,7 +207,9 @@ function twPlScheduleInfoVillageCoordRefresh(){
 			}
 		}
 		if (++n < 55) setTimeout(tick, 200);
-		else if (!inp.value || !String(inp.value).trim()) twPlFillTargetCoordInput(null);
+		else {
+			if (!inp.value || !String(inp.value).trim()) twPlFillTargetCoordInput(null);
+		}
 	}
 	setTimeout(tick, 50);
 }
@@ -198,7 +225,7 @@ function twPlWatchContentValueCoords(){
 		deb = setTimeout(function(){
 			deb = null;
 			var parsed = twPlCoordsFromInfoVillage();
-			if (!parsed) return;
+			if (!parsed || twPlRejectNoiseCoordPair(parsed)) return;
 			twPlFillTargetCoordInput(parsed);
 			try {
 				if (typeof mojeWioski !== 'undefined' && mojeWioski && mojeWioski.length) pokazOdleglosc();
@@ -224,7 +251,7 @@ function twPlCoordsFromVisTablesByLabel(){
 			var label = (row.cells[0].textContent || '').replace(/\s+/g, ' ').trim();
 			if (labelRe.test(label)) {
 				var got = twPlParseCoordText(row.cells[1].textContent);
-				if (got) return got;
+				if (got && !twPlRejectNoiseCoordPair(got)) return got;
 			}
 		}
 	}
@@ -243,7 +270,10 @@ function twPlCoordsFromVisTablesByLabel(){
 			if (twPlParseCoordText(c0)) continue;
 			hits.push(g);
 		}
-		if (hits.length === 1) return hits[0];
+		if (hits.length === 1) {
+			if (twPlRejectNoiseCoordPair(hits[0])) return null;
+			return hits[0];
+		}
 	}
 	return null;
 }
@@ -255,7 +285,9 @@ function twPlCoordsFromEmbeddedMapGlobal(){
 		if (hay.length > 900000) hay = hay.slice(0, 900000);
 		var re = /(?:TWMap\.)?showEmbeddedMap\s*\(\s*[\s\S]*?,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)/;
 		var m = re.exec(hay);
-		return m ? m[1] + '|' + m[2] : null;
+		if (!m) return null;
+		var gp = m[1] + '|' + m[2];
+		return twPlRejectNoiseCoordPair(gp) ? null : gp;
 	} catch (e) {
 		return null;
 	}
@@ -269,7 +301,10 @@ function twPlCoordsFromMapLinks(scope){
 		var h = as[i].getAttribute('href') || '';
 		var mx = /[?&]x=(\d+)/.exec(h);
 		var my = /[?&]y=(\d+)/.exec(h);
-		if (mx && my) return mx[1] + '|' + my[1];
+		if (mx && my) {
+			var pair = mx[1] + '|' + my[1];
+			if (!twPlRejectNoiseCoordPair(pair)) return pair;
+		}
 	}
 	return null;
 }
@@ -287,8 +322,9 @@ function twPlCoordsFromEmbeddedMap(){
 	var hay = chunks.join('\n');
 	var re = /(?:TWMap\.)?showEmbeddedMap\s*\(\s*[\s\S]*?,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)/;
 	var m = re.exec(hay);
-	if (m) return m[1] + '|' + m[2];
-	return null;
+	if (!m) return null;
+	var ep = m[1] + '|' + m[2];
+	return twPlRejectNoiseCoordPair(ep) ? null : ep;
 }
 
 /** URL id ile game_data.village ayni koy ise (kendi koyun bilgi sayfasi) */
@@ -331,7 +367,7 @@ function twPlCoordsFromVillageTableCell(){
 		} catch (eS) { el = null; }
 		if (!el) continue;
 		var got = twPlParseCoordText(el.textContent);
-		if (got) return got;
+		if (got && !twPlRejectNoiseCoordPair(got)) return got;
 	}
 	return null;
 }
@@ -344,11 +380,7 @@ function twPlCoordsFromInfoVillage(){
 	var cv = document.getElementById('content_value');
 	if (!cv) return null;
 
-	var fromEmbed = twPlCoordsFromEmbeddedMap();
-	if (fromEmbed) return fromEmbed;
-	fromEmbed = twPlCoordsFromEmbeddedMapGlobal();
-	if (fromEmbed) return fromEmbed;
-
+	/* DOM / tablo / link once: global showEmbeddedMap ilk eslesmesi baska koy/harita widget'i yakalayabiliyordu */
 	var fromCell = twPlCoordsFromVillageTableCell();
 	if (fromCell) return fromCell;
 
@@ -362,11 +394,10 @@ function twPlCoordsFromInfoVillage(){
 		if (!tbl.rows || tbl.rows.length < 1) return null;
 		for (var r = 0; r < Math.min(tbl.rows.length, 15); r++) {
 			var row = tbl.rows[r];
-			for (var c = 0; c < row.cells.length; c++) {
-				var cell = (row.cells[c].textContent || '').trim();
-				var mm = twPlParseCoordText(cell);
-				if (mm) return mm;
-			}
+			if (row.cells.length < 2) continue;
+			var cell = (row.cells[1].textContent || '').trim();
+			var mm = twPlParseCoordText(cell);
+			if (mm && !twPlRejectNoiseCoordPair(mm)) return mm;
 		}
 		return null;
 	}
@@ -389,13 +420,25 @@ function twPlCoordsFromInfoVillage(){
 		}
 	}
 
+	var anchoredTxt = twPlCoordsFromAnchoredBlockText(cv);
+	if (anchoredTxt) return anchoredTxt;
 	var blockText = (cv.innerText || cv.textContent || '').replace(/\s+/g, ' ');
 	var m = blockText.match(/(\d{1,4})\s*\|\s*(\d{1,4})/)
 		|| blockText.match(/\b(\d{1,4})\s+[·‧•∶:]\s+(\d{1,4})\b/);
-	if (m) return m[1] + '|' + m[2];
+	if (m) {
+		var btPair = m[1] + '|' + m[2];
+		if (!twPlRejectNoiseCoordPair(btPair)) return btPair;
+	}
 	var outer = document.getElementById('contentContainer');
 	var docMap = outer ? twPlCoordsFromMapLinks(outer) : null;
-	return docMap || null;
+	if (docMap) return docMap;
+
+	var fromEmbed = twPlCoordsFromEmbeddedMap();
+	if (fromEmbed) return fromEmbed;
+	fromEmbed = twPlCoordsFromEmbeddedMapGlobal();
+	if (fromEmbed) return fromEmbed;
+
+	return null;
 }
 
 function wypiszMozliwosci(){
@@ -676,6 +719,7 @@ function rysujPlaner(){
 		if(!mobile){
 			var cv = document.getElementById('content_value');
 			var parsed = twPlCoordsFromInfoVillage() || twPlCoordsFromMapLinks(cv);
+			if (parsed && twPlRejectNoiseCoordPair(parsed)) parsed = null;
 			if (parsed) {
 				cel = twPlSanitizeCoordPair(parsed, fbX, fbY);
 			} else {
@@ -684,7 +728,7 @@ function rysujPlaner(){
 				if (tabela && tabela.rows && tabela.rows[2] && tabela.rows[2].cells[1])
 					legacyRaw = (tabela.rows[2].cells[1].textContent || '').trim();
 				var fromLegacy = legacyRaw ? twPlSanitizeCoordPair(legacyRaw, null, null) : '0|0';
-				if (fromLegacy !== '0|0') cel = fromLegacy;
+				if (fromLegacy !== '0|0' && !twPlRejectNoiseCoordPair(fromLegacy)) cel = fromLegacy;
 			}
 			cel = twPlSanitizeCoordPair(cel, fbX, fbY);
 		}
@@ -706,7 +750,7 @@ function rysujPlaner(){
 				return;
 			}
 		});
-	var elem = "<div class='vis vis_item' style='overflow: auto; height: 300px;' id='planer_klinow' data-arascript-rev='2026-05-15' title='arascript guncel'><table width='100%'><tr><td width='300'><table style=\"border-spacing: 3px; border-collapse: separate;\"><tr><th>Hedef<th>Tarih<th>Saat<th>Grup<th><th><tr><td><input size=8 type='text' onchange='pokazOdleglosc();' value='' autocomplete='off' id='wspolrzedneCelu' /><td><input size=8 type='text' value='" + obecnyCzas.getDate()+"."+(obecnyCzas.getMonth()+1)+"."+obecnyCzas.getFullYear() + "' onchange=\"poprawDate(this,'.');\" id='data_wejscia'/><td><input size=8 type='text' value='" + obecnyCzas.getHours()+":"+obecnyCzas.getMinutes()+":"+obecnyCzas.getSeconds() + "' onchange=\"poprawDate(this,':');\" id='godzina_wejscia'/><td><select id='listGrup' onchange=\"zmienGrupe();\"><option value='"+wszystkieWojska+"'>Tumu</select><td onclick=\"zmienStrzalke(); if($('#wyborWojsk').is(':visible')){ $('#wyborWojsk').hide();$('#lista_wojska').show(); zapiszWybrane(); return;}	else{ $('#lista_wojska').hide(); $('#wyborWojsk').show();} \" style=\"cursor:pointer;\"><span id='strzaleczka' class='icon header arr_down' ></span><td><input type='button' class='btn' value='Hesapla' title='Asker listesi yuklenene kadar bekleyin' disabled onclick=\"wypiszMozliwosci();\" id='przycisk'></table><td id='ladowanie'><img src='"+image_base+"throbber.gif' />";
+	var elem = "<div class='vis vis_item' style='overflow: auto; height: 300px;' id='planer_klinow' data-arascript-rev='2026-05-19' title='arascript guncel'><table width='100%'><tr><td width='300'><table style=\"border-spacing: 3px; border-collapse: separate;\"><tr><th>Hedef<th>Tarih<th>Saat<th>Grup<th><th><tr><td><input size=8 type='text' onchange='pokazOdleglosc();' value='' autocomplete='off' id='wspolrzedneCelu' /><td><input size=8 type='text' value='" + obecnyCzas.getDate()+"."+(obecnyCzas.getMonth()+1)+"."+obecnyCzas.getFullYear() + "' onchange=\"poprawDate(this,'.');\" id='data_wejscia'/><td><input size=8 type='text' value='" + obecnyCzas.getHours()+":"+obecnyCzas.getMinutes()+":"+obecnyCzas.getSeconds() + "' onchange=\"poprawDate(this,':');\" id='godzina_wejscia'/><td><select id='listGrup' onchange=\"zmienGrupe();\"><option value='"+wszystkieWojska+"'>Tumu</select><td onclick=\"zmienStrzalke(); if($('#wyborWojsk').is(':visible')){ $('#wyborWojsk').hide();$('#lista_wojska').show(); zapiszWybrane(); return;}	else{ $('#lista_wojska').hide(); $('#wyborWojsk').show();} \" style=\"cursor:pointer;\"><span id='strzaleczka' class='icon header arr_down' ></span><td><input type='button' class='btn' value='Hesapla' title='Asker listesi yuklenene kadar bekleyin' disabled onclick=\"wypiszMozliwosci();\" id='przycisk'></table><td id='ladowanie'><img src='"+image_base+"throbber.gif' />";
 	elem += "<tr><td colspan=2 width='100%'><table style=\"display: none; border-spacing: 3px; border-collapse: separate;\" id='wyborWojsk' width='100%'></table><table style=\"border-spacing: 3px; border-collapse: separate;\" id='lista_wojska' width='100%'><thead><tr><th id='ilosc_mozliwosci'><span class='icon header village' ></span>";
 
 	for(i=0;i<obrazki.length;i++)
