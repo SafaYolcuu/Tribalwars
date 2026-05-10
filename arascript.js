@@ -123,19 +123,31 @@ function twPlParseCoordText(text){
 	return mm ? mm[1] + '|' + mm[2] : null;
 }
 
-/** Klanlar masaustu layout XPath tabani; koy tasarimi/ekstra ozellik satirlari koordinati tr[3]..tr[9] arasinda kaydirir. */
+/** Klanlar masaustu layout: ayni taban XPath; once tr[3..9] icinde td[1] etiketi Koordinat olan satirin td[2] degerini al (satir kaymasi). */
 function twPlCoordsFromLayoutXPath(){
 	var base = '/html/body/table/tbody/tr[2]/td[2]/table[3]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[1]/table[1]/tbody/tr';
-	var suffix = '/td[2]';
 	for (var n = 3; n <= 9; n++) {
 		try {
-			var xp = base + '[' + n + ']' + suffix;
-			var r = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-			var node = r.singleNodeValue;
-			if (!node) continue;
-			var got = twPlParseCoordText(node.textContent);
-			if (got) return got;
+			var xpRow = base + '[' + n + ']';
+			var r = document.evaluate(xpRow, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+			var tr = r.singleNodeValue;
+			if (!tr || !tr.cells || tr.cells.length < 2) continue;
+			var label = (tr.cells[0].textContent || '').replace(/\s+/g, ' ').trim();
+			if (/koordinat/i.test(label) || /^coord/i.test(label)) {
+				var got = twPlParseCoordText(tr.cells[1].textContent);
+				if (got) return got;
+			}
 		} catch (e) {}
+	}
+	for (var j = 3; j <= 9; j++) {
+		try {
+			var xp = base + '[' + j + ']/td[2]';
+			var r2 = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+			var node = r2.singleNodeValue;
+			if (!node) continue;
+			var got2 = twPlParseCoordText(node.textContent);
+			if (got2) return got2;
+		} catch (e2) {}
 	}
 	return null;
 }
