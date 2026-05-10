@@ -123,14 +123,20 @@ function twPlParseCoordText(text){
 	return mm ? mm[1] + '|' + mm[2] : null;
 }
 
-/** Klanlar masaustu ana govde: koordinat hucresi (senin XPath ile ayni dugum). */
+/** Klanlar masaustu layout XPath tabani; koy tasarimi/ekstra ozellik satirlari koordinati tr[3]..tr[9] arasinda kaydirir. */
 function twPlCoordsFromLayoutXPath(){
-	var xp = '/html/body/table/tbody/tr[2]/td[2]/table[3]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[1]/table[1]/tbody/tr[4]/td[2]';
-	try {
-		var r = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-		var node = r.singleNodeValue;
-		if (node) return twPlParseCoordText(node.textContent);
-	} catch (e) {}
+	var base = '/html/body/table/tbody/tr[2]/td[2]/table[3]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[1]/table[1]/tbody/tr';
+	var suffix = '/td[2]';
+	for (var n = 3; n <= 9; n++) {
+		try {
+			var xp = base + '[' + n + ']' + suffix;
+			var r = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+			var node = r.singleNodeValue;
+			if (!node) continue;
+			var got = twPlParseCoordText(node.textContent);
+			if (got) return got;
+		} catch (e) {}
+	}
 	return null;
 }
 
