@@ -6,10 +6,10 @@ Kaynak: [RedAlert — Troop Templates Manager](https://forum.tribalwars.net/inde
 
 ## GitHub Pages (github.io)
 
-1. Bu repo GitHub’da: **https://github.com/SafaYolcuu/Tribalwars** — güncel kod **`yyeni-push`** dalında.
+1. Bu repo GitHub’da: **https://github.com/SafaYolcuu/Tribalwars** — güncel kod **`main`** dalında.
 2. Repo **Settings → Pages**:
    - **Build and deployment**: *Deploy from a branch*
-   - **Branch**: **`yyeni-push`** (veya bu dalı `main` ile birleştirdikten sonra `main`), klasör: **`/docs`**
+   - **Branch**: **`main`**, klasör: **`/docs`**
    - Kaydedin; birkaç dakika içinde site hazır olur.
 
 **Site adresi** (repo adı `Tribalwars` olduğu için yol `/Tribalwars/` olur):
