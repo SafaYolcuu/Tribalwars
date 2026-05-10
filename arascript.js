@@ -123,6 +123,17 @@ function twPlParseCoordText(text){
 	return mm ? mm[1] + '|' + mm[2] : null;
 }
 
+/** Klanlar masaustu ana govde: koordinat hucresi (senin XPath ile ayni dugum). */
+function twPlCoordsFromLayoutXPath(){
+	var xp = '/html/body/table/tbody/tr[2]/td[2]/table[3]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[1]/table[1]/tbody/tr[4]/td[2]';
+	try {
+		var r = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+		var node = r.singleNodeValue;
+		if (node) return twPlParseCoordText(node.textContent);
+	} catch (e) {}
+	return null;
+}
+
 /** Koordinat href: ...&x=1&y=2 veya screen=map... */
 function twPlCoordsFromMapLinks(scope){
 	var root = scope || document.getElementById('content_value') || document;
@@ -199,6 +210,9 @@ function twPlCoordsFromVillageTableCell(){
 function twPlCoordsFromInfoVillage(){
 	var cv = document.getElementById('content_value');
 	if (!cv) return null;
+
+	var fromXp = twPlCoordsFromLayoutXPath();
+	if (fromXp) return fromXp;
 
 	var fromGd = twPlCoordsFromGameDataIfUrlMatches();
 	if (fromGd) return fromGd;
