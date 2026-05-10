@@ -100,6 +100,75 @@ function twPlToast(msg, isErr){
 	else window.alert(msg);
 }
 
+/** Metinden veya ham cel dizgisinden gecerli x|y; olmazsa su anki koy (fallback). */
+function twPlSanitizeCoordPair(str, fallbackX, fallbackY){
+	var s = String(str != null ? str : '')
+		.replace(/\r\n|\r|\n/g, ' ')
+		.replace(/\u00a0/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	var m = s.match(/(\d{1,4})\s*\|\s*(\d{1,4})/)
+		|| s.match(/(\d{1,4})\s*[·‧•∶:×]\s*(\d{1,4})/);
+	if (m) return parseInt(m[1], 10) + '|' + parseInt(m[2], 10);
+	var fx = fallbackX != null && fallbackX !== '' ? Number(fallbackX) : NaN;
+	var fy = fallbackY != null && fallbackY !== '' ? Number(fallbackY) : NaN;
+	if (Number.isFinite(fx) && Number.isFinite(fy)) return fx + '|' + fy;
+	return '0|0';
+}
+
+function twPlParseCoordText(text){
+	var cell = String(text != null ? text : '').trim();
+	var mm = cell.match(/\b(\d{1,4})\s*\|\s*(\d{1,4})\b/)
+		|| cell.match(/\b(\d{1,4})\s*[·‧•∶:×]\s*(\d{1,4})\b/)
+		|| cell.match(/(\d{1,4})\s*\|\s*(\d{1,4})/);
+	return mm ? mm[1] + '|' + mm[2] : null;
+}
+
+/** Koordinat href: ...&x=1&y=2 veya screen=map... */
+function twPlCoordsFromMapLinks(scope){
+	var root = scope || document.getElementById('content_value') || document;
+	var as = root.querySelectorAll ? root.querySelectorAll('a[href*="x="], a[href*="&y="], a[href*="screen=map"]') : [];
+	for (var i = 0; i < as.length; i++) {
+		var h = as[i].getAttribute('href') || '';
+		var mx = /[?&]x=(\d+)/.exec(h);
+		var my = /[?&]y=(\d+)/.exec(h);
+		if (mx && my) return mx[1] + '|' + my[1];
+	}
+	return null;
+}
+
+/**
+ * info_village sol ust vis tablosu: "Koordinatlar:" satiri (skin satiri satir sayisini kaydirir).
+ * Sabit nth-child yedek; once etiket ile bulunur (TR/EN/DE).
+ */
+function twPlCoordsFromVillageTableCell(){
+	var cv = document.getElementById('content_value');
+	if (!cv) return null;
+	var vis = cv.querySelector('table.vis');
+	if (vis && vis.rows && vis.rows.length) {
+		for (var r = 0; r < vis.rows.length; r++) {
+			var row = vis.rows[r];
+			if (row.cells.length < 2) continue;
+			var label = (row.cells[0].textContent || '').replace(/\s+/g, ' ').trim();
+			if (/koordinat/i.test(label) || /^coord/i.test(label)) {
+				var got = twPlParseCoordText(row.cells[1].textContent);
+				if (got) return got;
+			}
+		}
+	}
+	var nthSelectors = [
+		'#content_value > table > tbody > tr > td:nth-child(1) > table:nth-child(1) > tbody > tr:nth-child(4) > td:nth-child(2)',
+		'#content_value > table > tbody > tr > td:nth-child(1) > table:nth-child(1) > tbody > tr:nth-child(3) > td:nth-child(2)'
+	];
+	for (var s = 0; s < nthSelectors.length; s++) {
+		var el = document.querySelector(nthSelectors[s]);
+		if (!el) continue;
+		var got = twPlParseCoordText(el.textContent);
+		if (got) return got;
+	}
+	return null;
+}
+
 /**
  * info_village sayfasinda hedef koy koordinati (x|y).
  * TW arayuzu degisince sabit satir/hucre indeksleri kirilir; once metin icinde arar, sonra tablolari dener.
@@ -108,13 +177,20 @@ function twPlCoordsFromInfoVillage(){
 	var cv = document.getElementById('content_value');
 	if (!cv) return null;
 
+	var fromCell = twPlCoordsFromVillageTableCell();
+	if (fromCell) return fromCell;
+
+	var fromMap = twPlCoordsFromMapLinks(cv);
+	if (fromMap) return fromMap;
+
 	function cellMatch(tbl){
 		if (!tbl.rows || tbl.rows.length < 1) return null;
 		for (var r = 0; r < Math.min(tbl.rows.length, 15); r++) {
 			var row = tbl.rows[r];
 			for (var c = 0; c < row.cells.length; c++) {
 				var cell = (row.cells[c].textContent || '').trim();
-				var mm = cell.match(/\b(\d{1,4})\|(\d{1,4})\b/);
+				var mm = cell.match(/\b(\d{1,4})\s*\|\s*(\d{1,4})\b/)
+					|| cell.match(/\b(\d{1,4})\s*[·‧•∶:×]\s*(\d{1,4})\b/);
 				if (mm) return mm[1] + '|' + mm[2];
 			}
 		}
@@ -122,12 +198,15 @@ function twPlCoordsFromInfoVillage(){
 	}
 
 	var visList = cv.getElementsByClassName('vis');
+	var found = null;
 	for (var v = 0; v < visList.length; v++) {
 		var root = visList[v];
 		if (root.tagName === 'TABLE') {
-			var found = cellMatch(root);
+			found = cellMatch(root);
 			if (found) return found;
 		} else {
+			found = twPlCoordsFromMapLinks(root);
+			if (found) return found;
 			var innerTables = root.querySelectorAll('table');
 			for (var t = 0; t < innerTables.length; t++) {
 				found = cellMatch(innerTables[t]);
@@ -137,7 +216,8 @@ function twPlCoordsFromInfoVillage(){
 	}
 
 	var blockText = (cv.innerText || cv.textContent || '').replace(/\s+/g, ' ');
-	var m = blockText.match(/\b(\d{1,4})\|(\d{1,4})\b/);
+	var m = blockText.match(/\b(\d{1,4})\s*\|\s*(\d{1,4})\b/)
+		|| blockText.match(/\b(\d{1,4})\s+[·‧•∶:]\s+(\d{1,4})\b/);
 	return m ? m[1] + '|' + m[2] : null;
 }
 
@@ -403,24 +483,30 @@ function zmienStrzalke(){
 	}; 
 } 
 function rysujPlaner(){
-	var cel = game_data.village.x + "|" + game_data.village.y;
+	var fbX = game_data.village.x, fbY = game_data.village.y;
+	var cel = twPlSanitizeCoordPair(fbX + '|' + fbY, fbX, fbY);
 	if(game_data.screen=="info_village"){
 		if(!mobile){
-			var parsed = twPlCoordsFromInfoVillage();
-			if (parsed) cel = parsed;
-			else {
-				var tabela = document.getElementById("content_value") && document.getElementById("content_value").getElementsByClassName('vis')[0];
-				if (tabela && tabela.rows && tabela.rows[2] && tabela.rows[2].cells[1]) {
-					var legacy = (tabela.rows[2].cells[1].textContent || '').match(/\b(\d{1,4})\|(\d{1,4})\b/);
-					if (legacy) cel = legacy[1] + '|' + legacy[2];
-				}
+			var cv = document.getElementById('content_value');
+			var parsed = twPlCoordsFromInfoVillage() || twPlCoordsFromMapLinks(cv);
+			if (parsed) {
+				cel = twPlSanitizeCoordPair(parsed, fbX, fbY);
+			} else {
+				var tabela = cv && cv.getElementsByClassName('vis')[0];
+				var legacyRaw = '';
+				if (tabela && tabela.rows && tabela.rows[2] && tabela.rows[2].cells[1])
+					legacyRaw = (tabela.rows[2].cells[1].textContent || '').trim();
+				var fromLegacy = legacyRaw ? twPlSanitizeCoordPair(legacyRaw, null, null) : '0|0';
+				if (fromLegacy !== '0|0') cel = fromLegacy;
 			}
+			cel = twPlSanitizeCoordPair(cel, fbX, fbY);
 		}
 		else{
 			var mkv = document.getElementsByClassName('mobileKeyValue')[0];
 			var mobDiv = mkv && mkv.getElementsByTagName("div")[0];
-			var mobMatch = mobDiv && (mobDiv.textContent || '').match(/\b(\d{1,4})\|(\d{1,4})\b/);
+			var mobMatch = mobDiv && (mobDiv.textContent || '').match(/\b(\d{1,4})\s*\|\s*(\d{1,4})\b/);
 			if (mobMatch) cel = mobMatch[1] + '|' + mobMatch[2];
+			cel = twPlSanitizeCoordPair(cel, fbX, fbY);
 		}
 	}
 	var pobralemCzas = false;
@@ -441,6 +527,8 @@ function rysujPlaner(){
 	elem += "<th>Cikis\u00A0zamani<th><span class=\'icon header time\'><th><b>Emir</b></thead>";
 	elem += "<tbody></table></table></div>";
 	$(mobile?"#mobileContent":"#contentContainer").prepend(elem);
+	var $celInp = $('#wspolrzedneCelu');
+	if ($celInp.length) $celInp.val(cel);
 }
 function komutTiklamaEkle(){
 	var rows = jQuery('#commands_outgoings .command-row');
